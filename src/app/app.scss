@@ -1,0 +1,99 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fcf8f9;
+  color: #333;
+}
+
+.header {
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+
+  .logo a {
+    color: #00d1b2;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    a, button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      padding: 0 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background-color: transparent;
+      color: #333333;
+      transition: all 0.2s ease-in-out;
+      font-family: inherit;
+
+      &:hover {
+        background-color: #f4f6f8;
+        color: #00d1b2;
+      }
+    }
+
+    .btn-outline, 
+    .login-btn {
+      background-color: #f4f6f8;
+      border: 1px solid #e0e0e0;
+      color: #333;
+
+      &:hover {
+        background-color: #eafaf7;
+        border-color: #00d1b2;
+        color: #00d1b2;
+      }
+    }
+
+    .cart-link,
+    .btn-cart {
+      background-color: #00d1b2;
+      color: #ffffff;
+
+      &:hover {
+        background-color: #00b89c;
+        color: #ffffff;
+      }
+
+      .badge {
+        background-color: #ffffff;
+        color: #00d1b2;
+        border-radius: 12px;
+        padding: 0.15rem 0.5rem;
+        font-size: 0.75rem;
+        margin-left: 0.5rem;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
