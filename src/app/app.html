@@ -4,15 +4,19 @@
   </div>
   <nav class="nav-links">
     <a routerLink="/">Catálogo</a>
+
     <a routerLink="/cart" class="cart-link">
       Carrinho
       @if (cartService.totalItems() > 0) {
         <span class="badge">{{ cartService.totalItems() }}</span>
       }
     </a>
-    
+
+    <a routerLink="/meus-pedidos" class="header-btn"> 📦 Pedidos </a>
+
     @if (authService.currentUser()) {
-      <span class="user-greeting">Olá, {{ authService.currentUser() }}!</span>
+      <a routerLink="/meus-pedidos" class="header-btn">📦 Pedidos</a>
+      <span class="user-greeting">Olá, {{ getUserDisplayName(authService.currentUser()) }}!</span>
       <button (click)="authService.logout()" class="logout-btn">Sair</button>
     } @else {
       <a routerLink="/login" class="login-btn">Entrar / Login</a>

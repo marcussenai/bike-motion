@@ -1,65 +1,137 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { CouponService } from './coupon.service';
+import { Coupon } from '../models/coupon.model';
+import { Bike } from './bike.service';
 
 export interface CartItem {
-  bike: any;
+  id: number;
+  name: string;
+  price: number;
   quantity: number;
+  imageUrl: string;
+  bike: Bike;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CartService {
-  private cartItems = signal<CartItem[]>([]);
+  private readonly couponService = inject(CouponService);
 
-  items = this.cartItems.asReadonly();
+  readonly items = signal<CartItem[]>([]);
+  readonly appliedCoupon = signal<Coupon | null>(null);
+  readonly couponError = signal<string | null>(null);
 
-  totalItems = computed(() =>
-    this.cartItems().reduce((acc, item) => acc + item.quantity, 0)
+  readonly totalItems = computed(() => this.items().reduce((acc, item) => acc + item.quantity, 0));
+
+  readonly subtotal = computed(() =>
+    this.items().reduce((total, item) => total + item.price * item.quantity, 0),
   );
 
-  totalPrice = computed(() =>
-    this.cartItems().reduce((acc, item) => acc + item.bike.price * item.quantity, 0)
-  );
+  readonly discountValue = computed(() => {
+    const coupon = this.appliedCoupon();
+    if (!coupon) return 0;
+    return (this.subtotal() * coupon.discountPercent) / 100;
+  });
 
-  addToCart(bike: any) {
-    const current = this.cartItems();
-    const existingIndex = current.findIndex(item => item.bike.id === bike.id);
+  readonly total = computed(() => {
+    const finalPrice = this.subtotal() - this.discountValue();
+    return Math.max(0, finalPrice);
+  });
 
-    if (existingIndex > -1) {
-      const currentQty = current[existingIndex].quantity;
-      if (currentQty < bike.stock) {
-        const updated = [...current];
-        updated[existingIndex].quantity += 1;
-        this.cartItems.set(updated);
-      }
-    } else {
-      if (bike.stock > 0) {
-        this.cartItems.set([...current, { bike, quantity: 1 }]);
-      }
-    }
-  }
+  readonly totalPrice = computed(() => this.total());
 
-  updateQuantity(bikeId: number | string, newQuantity: number, maxStock: number) {
-    if (newQuantity <= 0) {
-      this.removeFromCart(bikeId);
+  addToCart(bike: Bike, quantity = 1): void {
+    if (quantity <= 0) return;
+
+    const currentItems = this.items();
+    const existingIndex = currentItems.findIndex((item) => item.id === bike.id);
+    const currentQuantity = existingIndex > -1 ? currentItems[existingIndex].quantity : 0;
+    const targetQuantity = currentQuantity + quantity;
+
+    if (targetQuantity > bike.stock) {
       return;
     }
 
-    // Trava no limite máximo de estoque
-    const targetQuantity = Math.min(newQuantity, maxStock);
+    if (existingIndex > -1) {
+      const updated = currentItems.map((item, index) =>
+        index === existingIndex ? { ...item, quantity: targetQuantity } : item,
+      );
+      this.items.set(updated);
+    } else {
+      const newItem: CartItem = {
+        id: bike.id,
+        name: bike.name,
+        price: bike.price,
+        quantity,
+        imageUrl: bike.imageUrl,
+        bike,
+      };
+      this.items.set([...currentItems, newItem]);
+    }
+  }
 
-    this.cartItems.update(items =>
-      items.map(item =>
-        item.bike.id === bikeId ? { ...item, quantity: targetQuantity } : item
-      )
+  removeFromCart(id: number): void {
+    this.items.update((items) => items.filter((item) => item.id !== id));
+  }
+
+  updateQuantity(id: number, quantity: number): void {
+    if (quantity <= 0) {
+      this.removeFromCart(id);
+      return;
+    }
+
+    this.items.update((items) =>
+      items.map((item) => {
+        if (item.id !== id) return item;
+
+        const maxQuantity = Math.min(quantity, item.bike.stock);
+        return { ...item, quantity: maxQuantity };
+      }),
     );
   }
 
-  removeFromCart(bikeId: number | string) {
-    this.cartItems.update(items => items.filter(item => item.bike.id !== bikeId));
+  clearCart(): void {
+    this.items.set([]);
+    this.removeCoupon();
   }
 
-  clearCart() {
-    this.cartItems.set([]);
+  applyCoupon(code: string): boolean {
+    this.couponError.set(null);
+
+    const cleanCode = code.trim();
+    if (!cleanCode) {
+      this.couponError.set('Digite o código do cupom.');
+      return false;
+    }
+
+    const coupon = this.couponService.getCouponByCode(cleanCode);
+    if (!coupon) {
+      this.couponError.set('Cupom inválido ou expirado.');
+      return false;
+    }
+
+    if (coupon.usedCount >= coupon.maxUsage) {
+      this.couponError.set('Este cupom atingiu o limite máximo de usos.');
+      return false;
+    }
+
+    this.appliedCoupon.set(coupon);
+    return true;
+  }
+
+  removeCoupon(): void {
+    this.appliedCoupon.set(null);
+    this.couponError.set(null);
+  }
+
+  completeCheckout(): void {
+    const coupon = this.appliedCoupon();
+    if (coupon) {
+      this.couponService.updateCoupon(coupon.id, {
+        usedCount: coupon.usedCount + 1,
+      });
+    }
+    this.clearCart();
   }
 }
